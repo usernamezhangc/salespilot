@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 # 引入我们自己写的 llm.py 里的 ask_llm 函数
 from salespilot.llm import ask_llm
+from salespilot.agent import app as agent_app
 
 app = FastAPI(title="SalesPilot API")
 
@@ -23,11 +24,13 @@ def chat(req: ChatRequest):
             3. 不知道的信息，诚实说明，不要编造。"""    
 
     # 把用户问题包装成"一条用户消息"
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": req.question}
+    initial_state = {
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": req.question}
         ]
-    # 调 LLM，拿到回答
-    answer = ask_llm(messages)
-    # 返回给浏览器
-    return {"answer": answer}
+    }
+    
+    final_state = agent_app.invoke(initial_state)
+
+    return {"answer": final_state["messages"][-1]["content"]}

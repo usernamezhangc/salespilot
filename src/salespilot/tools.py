@@ -33,12 +33,11 @@ def get_tool_schema() -> list[dict]:
             }
         }
     ]
+
 def call_tool(name: str, arguments: str) -> list[dict]:
     """根据工具名和参数，调用对应的工具函数。"""
     if name == "search_product":
         args = json.loads(arguments)
-        print(args)
-        print(args["keyword"])
         return search_product(args["keyword"])
     else:
         raise ValueError(f"未知工具 {name}")
