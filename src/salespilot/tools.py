@@ -1,17 +1,15 @@
 """工具的集合。Tool = 普通函数 + 给模型看的说明书(后面加 Schema)。"""
 
 import json
-
-from salespilot.products_data import PRODUCTS
+from sqlalchemy import inspect
+from salespilot.service import ProductService
 
 def search_product(keyword: str) -> list[dict]:
-    """按关键词在商品数据里模糊搜索，返回匹配的商品列表。"""
-    results = []
-    for product in PRODUCTS:
-        haystack = f"{product['name']} {product['category']} {product['description']}"
-        if keyword in haystack:
-            results.append(product)
-    return results
+    ps = ProductService()
+    return [
+    {c.key: getattr(p, c.key) for c in inspect(p).mapper.column_attrs}  # 把每个 p 转成 dict
+    for p in ps.search_product(keyword)                                 # 遍历 service 返回的商品
+]
 
 def get_tool_schema() -> list[dict]:
     return [
