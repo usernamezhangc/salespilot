@@ -7,6 +7,11 @@ from salespilot.agent import app as agent_app
 
 app = FastAPI(title="SalesPilot API")
 
+SYSTEM_PROMPT = """你是 SalesPilot 的智能客服助手。你的职责是解答与商品、订单、售后相关的问题。规则：
+            1. 只回答与销售/客服相关的内容，其他问题礼貌拒绝。
+            2. 回答简洁、专业、友好。
+            3. 不知道的信息，诚实说明，不要编造。"""
+
 # 定义"请求长什么样"：必须有一个字符串字段 question
 class ChatRequest(BaseModel):
     question: str
@@ -17,16 +22,10 @@ def root():
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-# system：给模型"入职培训"——身份、职责、纪律
-    system_prompt = """你是 SalesPilot 的智能客服助手。你的职责是解答与商品、订单、售后相关的问题。规则：
-            1. 只回答与销售/客服相关的内容，其他问题礼貌拒绝。
-            2. 回答简洁、专业、友好。
-            3. 不知道的信息，诚实说明，不要编造。"""    
-
     # 把用户问题包装成"一条用户消息"
     initial_state = {
         "messages": [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": req.question}
         ]
     }
