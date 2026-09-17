@@ -11,7 +11,7 @@ def seed():
         db.query(Products).delete()
         db.query(Orders).delete()
         db.commit()
-        
+
     for item in PRODUCTS:
         product = Products(
             name=item["name"],
@@ -34,7 +34,6 @@ def seed():
         )
         print(f"已添加： {item['order_no']}")
         add_order(order)
-    db.commit()
 
 if __name__ == "__main__":
     seed()

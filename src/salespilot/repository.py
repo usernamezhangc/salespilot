@@ -1,6 +1,6 @@
 from sqlalchemy import or_, select
 from salespilot.database import SessionLocal
-from salespilot.model import Products, KnowledgeChunk, Orders
+from salespilot.model import Products, KnowledgeChunk, Orders, ApprovalRequest
 
 def add_product(product: Products):
     with SessionLocal() as db:
@@ -62,5 +62,32 @@ def update_order_status(order_no: str, new_status: str) -> bool:
         if not order:
             return False
         order.status = new_status   # 改对象属性
+        db.commit()                 # 提交，真正写进数据库
+        return True
+
+def create_approval_request(req: ApprovalRequest):
+    """新增一条审批请求，返回带自增 id 的对象。"""
+    with SessionLocal() as db:
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+    return req
+
+def get_approval_request(request_id: int) -> ApprovalRequest | None:
+    """根据审批请求 id 查单个审批请求，找不到返回 None。"""
+    with SessionLocal() as db:
+        stmt = select(ApprovalRequest).where(ApprovalRequest.id == request_id)
+        return db.execute(stmt).scalars().first()
+
+def update_approval_status(request_id: int, new_status: str, note: str = "") -> bool:
+    """把审批请求状态改成 new_status。更新成功返回 True，审批请求不存在返回 False。"""
+    with SessionLocal() as db:
+        req = db.execute(
+            select(ApprovalRequest).where(ApprovalRequest.id == request_id)
+        ).scalars().first()
+        if not req:
+            return False
+        req.status = new_status   # 改对象属性
+        req.result_note = note
         db.commit()                 # 提交，真正写进数据库
         return True

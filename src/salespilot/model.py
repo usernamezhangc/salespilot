@@ -44,3 +44,22 @@ class Orders(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.now
     )
+
+class ApprovalRequest(Base):
+    __tablename__ = "approval_requests"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    action_type: Mapped[str] = mapped_column(String(50))
+    
+    action_args: Mapped[str] = mapped_column(Text)
+
+    status: Mapped[str] = mapped_column(String(20))
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    
+    result_note: Mapped[str | None] = mapped_column(String(255))
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )

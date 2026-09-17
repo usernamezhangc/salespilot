@@ -3,7 +3,7 @@
 import json
 import time
 from sqlalchemy import inspect
-from salespilot.service import ProductService, KnowledgeService, OrderService
+from salespilot.service import ProductService, KnowledgeService, OrderService, ApprovalService
 
 def search_product(keyword: str) -> list[dict]:
     ps = ProductService()
@@ -39,6 +39,18 @@ def list_orders(user_id: int) -> list[dict]:
 def cancel_order(order_no: str) -> str:
     """取消订单（内部会做状态校验）。"""
     return OrderService().cancel_order(order_no)
+
+def submit_for_approval(user_id: int, action_type: str, action_args: str) -> str:
+    """登记一条待审批的请求，暂不执行。action_args 是危险操作的参数（JSON 字符串）。"""
+    # 参数是 LLM 给的 JSON 字符串，转成 dict 交给 service
+    args = json.loads(action_args)
+    req = ApprovalService().create_request(user_id, action_type, args)
+    return f"审批请求已提交，编号 {req.id}，待人工审批。"
+
+def decide_approval(request_id: int, approve: bool, note: str = "") -> str:
+    """审批人处置一条待审批请求：approve=True 同意并执行，approve=False 拒绝不执行。"""
+    result, executed = ApprovalService().decide(request_id, approve, note)
+    return f"{result}（执行与否：{executed}）"
 
 def get_tool_schema() -> list[dict]:
     return [
@@ -126,7 +138,39 @@ def get_tool_schema() -> list[dict]:
                     "required": ["order_no"]
                 }
             }
-        }
+        },        
+        {
+            "type": "function",
+            "function": {
+                "name": "submit_for_approval",
+                "description": "发起一项需要人工审批的危险操作。适合取消订单等高风险操作：先登记审批请求，等审批通过才真正执行。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": {"type": "integer", "description": "发起操作的用户 ID"},
+                        "action_type": {"type": "string", "description": "操作类型，目前仅支持 cancel_order"},
+                        "action_args": {"type": "string", "description": "操作参数 JSON，如 {\"order_no\": \"ORD20260916001\"}"},
+                    },
+                    "required": ["user_id", "action_type", "action_args"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "decide_approval",
+                "description": "审批人处置一条待审批请求。同意则真正执行该操作，拒绝则不执行。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "request_id": {"type": "integer", "description": "审批请求的编号 id"},
+                        "approve": {"type": "boolean", "description": "true 表示同意，false 表示拒绝"},
+                        "note": {"type": "string", "description": "审批备注，可留空"},
+                    },
+                    "required": ["request_id", "approve"]
+                }
+            }
+        },
 
     ]
 
@@ -147,5 +191,11 @@ def call_tool(name: str, arguments: str) -> list[dict]:
     elif name == "cancel_order":
         args = json.loads(arguments)
         return cancel_order(args["order_no"])
+    elif name == "submit_for_approval":
+        args = json.loads(arguments)
+        return submit_for_approval(args["user_id"], args["action_type"], args["action_args"])
+    elif name == "decide_approval":
+        args = json.loads(arguments)
+        return decide_approval(args["request_id"], args["approve"], args.get("note", ""))
     else:
         raise ValueError(f"未知工具 {name}")
