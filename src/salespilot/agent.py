@@ -60,7 +60,7 @@ def route_after_agent(state: AgentState) -> str:
         return "tools"
     return "END"
 
-# 3. 建图
+# 建图
 graph = StateGraph(AgentState)
 graph.add_node("agent", agent_node)
 graph.add_node("tools", tools_node)
